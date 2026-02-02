@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "E:\\Escrow-DApp\\Contracts\\Escrow.sol": {
-      "lastModificationDate": 1770004194233,
-      "contentHash": "d41d8cd98f00b204e9800998ecf8427e",
+      "lastModificationDate": 1770005254860,
+      "contentHash": "1cc84a56e65153037d7664c430138056",
       "sourceName": "Contracts/Escrow.sol",
       "solcConfig": {
         "version": "0.8.28",
@@ -30,8 +30,12 @@
         }
       },
       "imports": [],
-      "versionPragmas": [],
-      "artifacts": []
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "Escrow"
+      ]
     }
   }
 }
