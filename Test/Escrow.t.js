@@ -92,117 +92,165 @@ describe("Escrow Contract", function () {
         });
     });
 
-    describe("Release Funds", function(){
-        it("Should release funds to seller", async function(){
+    describe("Release Funds", function () {
+        it("Should release funds to seller", async function () {
             await escrow.connect(buyer).deposit({ value: TEN_ETH });
             await escrow.connect(seller).confirmDelivery();
 
-            await expect (escrow.connect(buyer).releaseFunds()).to.emit(escrow, "Released").withArgs(seller.address, TEN_ETH);
-            expect (await escrow.getStatus()).to.equal(COMPLETED);
+            await expect(escrow.connect(buyer).releaseFunds()).to.emit(escrow, "Released").withArgs(seller.address, TEN_ETH);
+            expect(await escrow.getStatus()).to.equal(COMPLETED);
         });
 
-        it("Should transfer ETH to seller", async function(){
+        it("Should transfer ETH to seller", async function () {
             await escrow.connect(buyer).deposit({ value: TEN_ETH });
             await escrow.connect(seller).confirmDelivery();
 
             await expect(escrow.connect(buyer).releaseFunds()).to.changeEtherBalances([escrow, seller], [TEN_ETH.mul(-1), TEN_ETH]);
-            expect (await ethers.provider.getBalance(escrow.address)).to.changeEtherBalance(escrow, 0);
-            expect (await ethers.provider.getBalance(seller.address)).to.changeEtherBalance(seller, TEN_ETH);
+            expect(await ethers.provider.getBalance(escrow.address)).to.changeEtherBalance(escrow, 0);
+            expect(await ethers.provider.getBalance(seller.address)).to.changeEtherBalance(seller, TEN_ETH);
         });
 
-        it("Should revert when called by non-buyer", async function(){
+        it("Should revert when called by non-buyer", async function () {
             await escrow.connect(buyer).deposit({ value: TEN_ETH });
             await escrow.connect(seller).confirmDelivery();
 
-            await expect (escrow.connect(seller).releaseFunds()).to.be.revertedWithCustomError(escrow, "NotBuyer");
-            await expect (escrow.connect(arbiter).releaseFunds()).to.be.revertedWithCustomError(escrow, "NotBuyer");
+            await expect(escrow.connect(seller).releaseFunds()).to.be.revertedWithCustomError(escrow, "NotBuyer");
+            await expect(escrow.connect(arbiter).releaseFunds()).to.be.revertedWithCustomError(escrow, "NotBuyer");
         });
 
-        it("Should revert when buyer calls before delivery confirmation", async function(){
+        it("Should revert when buyer calls before delivery confirmation", async function () {
             await escrow.connect(buyer).deposit({ value: TEN_ETH });
 
-            await expect (escrow.connect(buyer).releaseFunds()).to.be.revertedWithCustomError(escrow, "InvalidState");
+            await expect(escrow.connect(buyer).releaseFunds()).to.be.revertedWithCustomError(escrow, "InvalidState");
         });
 
-        it("Should revert on multiple releases", async function(){
+        it("Should revert on multiple releases", async function () {
             await escrow.connect(buyer).deposit({ value: TEN_ETH });
             await escrow.connect(seller).confirmDelivery();
             await escrow.connect(buyer).releaseFunds();
-            
-            await expect (escrow.connect(buyer).releaseFunds()).to.be.revertedWithCustomError(escrow, "InvalidState");
+
+            await expect(escrow.connect(buyer).releaseFunds()).to.be.revertedWithCustomError(escrow, "InvalidState");
         });
     });
 
-    describe("Disputes", function(){
-        it("Should allow buyer to raise dispute", async function(){
+    describe("Disputes", function () {
+        it("Should allow buyer to raise dispute", async function () {
             await escrow.connect(buyer).deposit({ value: TEN_ETH });
 
             await expect(escrow.connect(buyer).raiseDispute()).to.emit(escrow, "Disputed").withArgs(buyer.address);
-            expect (await escrow.getStatus()).to.equal(DISPUTED);
+            expect(await escrow.getStatus()).to.equal(DISPUTED);
             expect(await ethers.provider.getBalance(escrow.address)).to.equal(TEN_ETH);
         });
 
-        it("Should allow seller to raise dispute", async function(){
+        it("Should allow seller to raise dispute", async function () {
             await escrow.connect(buyer).deposit({ value: TEN_ETH });
 
             await expect(escrow.connect(seller).raiseDispute()).to.emit(escrow, "Disputed").withArgs(seller.address);
-            expect (await escrow.getStatus()).to.equal(DISPUTED);
+            expect(await escrow.getStatus()).to.equal(DISPUTED);
             expect(await ethers.provider.getBalance(escrow.address)).to.equal(TEN_ETH);
         });
 
-        it("Should allow buyer to raise dispute after delivery confirmation", async function(){
+        it("Should allow buyer to raise dispute after delivery confirmation", async function () {
             await escrow.connect(buyer).deposit({ value: TEN_ETH });
             await escrow.connect(seller).confirmDelivery();
 
             await expect(escrow.connect(buyer).raiseDispute()).to.emit(escrow, "Disputed").withArgs(buyer.address);
-            expect (await escrow.getStatus()).to.equal(DISPUTED);
+            expect(await escrow.getStatus()).to.equal(DISPUTED);
             expect(await ethers.provider.getBalance(escrow.address)).to.equal(TEN_ETH);
         });
 
-        it("Should allow seller to raise dispute after delivery confirmation", async function(){
+        it("Should allow seller to raise dispute after delivery confirmation", async function () {
             await escrow.connect(buyer).deposit({ value: TEN_ETH });
             await escrow.connect(seller).confirmDelivery();
 
             await expect(escrow.connect(seller).raiseDispute()).to.emit(escrow, "Disputed").withArgs(seller.address);
-            expect (await escrow.getStatus()).to.equal(DISPUTED);
+            expect(await escrow.getStatus()).to.equal(DISPUTED);
             expect(await ethers.provider.getBalance(escrow.address)).to.equal(TEN_ETH);
         });
 
-        it("Should revert when non-parties try to raise dispute", async function(){
+        it("Should revert when non-parties try to raise dispute", async function () {
             await escrow.connect(buyer).deposit({ value: TEN_ETH });
             await escrow.connect(seller).confirmDelivery();
 
             await expect(escrow.connect(arbiter).raiseDispute()).to.be.reverted;
-            expect (await escrow.getStatus()).to.equal(DELIVERED);
+            expect(await escrow.getStatus()).to.equal(DELIVERED);
             expect(await ethers.provider.getBalance(escrow.address)).to.equal(TEN_ETH);
         });
 
-        it("Should revert when dispute is raised in CREATED state", async function(){
+        it("Should revert when dispute is raised in CREATED state", async function () {
             await expect(escrow.connect(buyer).raiseDispute()).to.be.revertedWithCustomError(escrow, "InvalidState");
         });
 
-        it("Should revert when dispute is raised in COMPLETED state", async function(){
+        it("Should revert when dispute is raised in COMPLETED state", async function () {
             await escrow.connect(buyer).deposit({ value: TEN_ETH });
             await escrow.connect(seller).confirmDelivery();
             await escrow.connect(buyer).releaseFunds();
-            
+
             await expect(escrow.connect(buyer).raiseDispute()).to.be.revertedWithCustomError(escrow, "InvalidState");
         });
 
-        it("Should revert no multiple disputes", async function(){
+        it("Should revert no multiple disputes", async function () {
             await escrow.connect(buyer).deposit({ value: TEN_ETH });
             await escrow.connect(buyer).raiseDispute();
-            
+
             await expect(escrow.connect(seller).raiseDispute()).to.be.revertedWithCustomError(escrow, "InvalidState");
             expect(await ethers.provider.getBalance(escrow.address)).to.equal(TEN_ETH);
         });
 
-        it("Should revert when arbiter to raise dispute while FUNDED", async function(){
+        it("Should revert when arbiter to raise dispute while FUNDED", async function () {
             await escrow.connect(buyer).deposit({ value: TEN_ETH });
 
             await expect(escrow.connect(arbiter).raiseDispute()).to.be.reverted;
-            expect (await escrow.getStatus()).to.equal(FUNDED);
+            expect(await escrow.getStatus()).to.equal(FUNDED);
             expect(await ethers.provider.getBalance(escrow.address)).to.equal(TEN_ETH);
-        })
+        });
+    });
+
+    describe("Arbiter Resolution", function () {
+        it("Should send ETH to seller when seller wins", async function () {
+            await escrow.connect(buyer).deposit({ value: TEN_ETH });
+            await escrow.connect(seller).confirmDelivery();
+            await escrow.connect(buyer).raiseDispute();
+
+            expect(await escrow.connect(arbiter).resolveDispute(true)).to.emit(escrow, "Resolved").withArgs(arbiter.address, true);
+            expect(await escrow.getStatus()).to.equal(COMPLETED);
+            expect(await ethers.provider.getBalance(escrow.address)).to.equal(0);
+            expect(await ethers.provider.getBalance(seller.address)).to.changeEtherBalance(seller, TEN_ETH);
+        });
+
+        it("Should send ETH to buyer when buyer wins", async function () {
+            await escrow.connect(buyer).deposit({ value: TEN_ETH });
+            await escrow.connect(seller).confirmDelivery();
+            await escrow.connect(buyer).raiseDispute();
+
+            expect(await escrow.connect(arbiter).resolveDispute(false)).to.emit(escrow, "Resolved").withArgs(arbiter.address, false);
+            expect(await escrow.getStatus()).to.equal(COMPLETED);
+            expect(await ethers.provider.getBalance(escrow.address)).to.equal(0);
+            expect(await ethers.provider.getBalance(buyer.address)).to.changeEtherBalance(buyer, TEN_ETH);
+        });
+
+        it("Should revert when non-arbiter tries to resolve", async function () {
+            await escrow.connect(buyer).deposit({ value: TEN_ETH });
+            await escrow.connect(seller).confirmDelivery();
+            await escrow.connect(buyer).raiseDispute();
+
+            await expect(escrow.connect(buyer).resolveDispute(true)).to.be.revertedWithCustomError(escrow, "NotArbiter");
+            await expect(escrow.connect(seller).resolveDispute(true)).to.be.revertedWithCustomError(escrow, "NotArbiter");
+        });
+
+        it("Should revert when called in non-disputed state", async function () {
+            await escrow.connect(buyer).deposit({ value: TEN_ETH });
+
+            await expect(escrow.connect(arbiter).resolveDispute(true)).to.be.revertedWithCustomError(escrow, "InvalidState");
+        });
+
+        it("Should revert on multiple resolutions", async function () {
+            await escrow.connect(buyer).deposit({ value: TEN_ETH });
+            await escrow.connect(seller).confirmDelivery();
+            await escrow.connect(buyer).raiseDispute();
+            await escrow.connect(arbiter).resolveDispute(true);
+
+            await expect(escrow.connect(arbiter).resolveDispute(false)).to.be.revertedWithCustomError(escrow, "InvalidState");
+        });
     });
 })
