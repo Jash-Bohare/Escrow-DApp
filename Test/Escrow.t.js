@@ -131,6 +131,29 @@ describe("Escrow Contract", function () {
 
             await expect(escrow.connect(buyer).releaseFunds()).to.be.revertedWithCustomError(escrow, "InvalidState");
         });
+
+        it("Should change contract's balance to zero after COMPLETED", async function(){
+            await escrow.connect(buyer).deposit({ value: TEN_ETH });
+            await escrow.connect(seller).confirmDelivery();
+            await escrow.connect(buyer).raiseDispute();
+            await escrow.connect(arbiter).resolveDispute(true);
+
+            expect(await ethers.provider.getBalance(escrow.address)).to.equal(0);
+        });
+
+        it("Contract's balance should be equal to the amount unless COMPLETED", async function(){
+            await escrow.connect(buyer).deposit({ value: TEN_ETH });
+
+            expect(await ethers.provider.getBalance(escrow.address)).to.equal(TEN_ETH);
+            
+            await escrow.connect(seller).confirmDelivery();
+            
+            expect(await ethers.provider.getBalance(escrow.address)).to.equal(TEN_ETH);
+            
+            await escrow.connect(buyer).raiseDispute();
+            
+            expect(await ethers.provider.getBalance(escrow.address)).to.equal(TEN_ETH);
+        });
     });
 
     describe("Disputes", function () {
@@ -253,4 +276,4 @@ describe("Escrow Contract", function () {
             await expect(escrow.connect(arbiter).resolveDispute(false)).to.be.revertedWithCustomError(escrow, "InvalidState");
         });
     });
-})
+});
