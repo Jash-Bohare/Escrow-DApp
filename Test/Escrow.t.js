@@ -85,4 +85,45 @@ describe("Escrow Contract", function () {
             await expect(escrow.connect(seller).confirmDelivery()).to.be.revertedWithCustomError(escrow, "InvalidState");
         });
     });
+
+    describe("Release Funds", function(){
+        it("Should release funds to seller", async function(){
+            await escrow.connect(buyer).deposit({ value: TEN_ETH });
+            await escrow.connect(seller).confirmDelivery();
+
+            await expect (escrow.connect(buyer).releaseFunds()).to.emit(escrow, "Released").withArgs(seller.address, TEN_ETH);
+            expect (await escrow.getStatus()).to.equal(4);
+        });
+
+        it("Should transfer ETH to seller", async function(){
+            await escrow.connect(buyer).deposit({ value: TEN_ETH });
+            await escrow.connect(seller).confirmDelivery();
+
+            await expect(escrow.connect(buyer).releaseFunds()).to.changeEtherBalances([escrow, seller], [TEN_ETH.mul(-1), TEN_ETH]);
+            expect (await ethers.provider.getBalance(escrow.address)).to.changeEtherBalance(escrow, 0);
+            expect (await ethers.provider.getBalance(seller.address)).to.changeEtherBalance(seller, TEN_ETH);
+        });
+
+        it("Should revert when called by non-buyer", async function(){
+            await escrow.connect(buyer).deposit({ value: TEN_ETH });
+            await escrow.connect(seller).confirmDelivery();
+
+            await expect (escrow.connect(seller).releaseFunds()).to.be.revertedWithCustomError(escrow, "NotBuyer");
+            await expect (escrow.connect(arbiter).releaseFunds()).to.be.revertedWithCustomError(escrow, "NotBuyer");
+        });
+
+        it("Should revert when buyer calls before delivery confirmation", async function(){
+            await escrow.connect(buyer).deposit({ value: TEN_ETH });
+
+            await expect (escrow.connect(buyer).releaseFunds()).to.be.revertedWithCustomError(escrow, "InvalidState");
+        });
+
+        it("Should revert on multiple releases", async function(){
+            await escrow.connect(buyer).deposit({ value: TEN_ETH });
+            await escrow.connect(seller).confirmDelivery();
+            await escrow.connect(buyer).releaseFunds();
+            
+            await expect (escrow.connect(buyer).releaseFunds()).to.be.revertedWithCustomError(escrow, "InvalidState");
+        });
+    })
 })
