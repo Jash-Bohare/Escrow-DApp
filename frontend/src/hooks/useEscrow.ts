@@ -1,8 +1,15 @@
-import { useState, useCallback } from 'react';
-import { parseEther, formatEther } from 'ethers';
-import { WalletState } from './useWallet';
+import { useState, useCallback, useEffect } from "react";
+import { Contract, parseEther, formatEther } from "ethers";
+import EscrowABI from "../abi/Escrow.json";
+import { WalletState } from "./useWallet";
+import { CONTRACT_ADDRESS } from "../constants";
 
-export type EscrowStatus = 'idle' | 'awaiting_deposit' | 'funded' | 'delivered' | 'released' | 'disputed' | 'resolved';
+export type EscrowStatus =
+  | "created"
+  | "funded"
+  | "delivered"
+  | "disputed"
+  | "completed";
 
 export interface EscrowState {
   status: EscrowStatus;
@@ -10,144 +17,171 @@ export interface EscrowState {
   buyer: string | null;
   seller: string | null;
   arbiter: string | null;
-  createdAt: Date | null;
 }
-
-// Mock contract addresses for demo
-const MOCK_SELLER = '0x1234567890123456789012345678901234567890';
-const MOCK_ARBITER = '0x0987654321098765432109876543210987654321';
 
 export function useEscrow(wallet: WalletState) {
   const [escrow, setEscrow] = useState<EscrowState>({
-    status: 'idle',
-    amount: '0',
+    status: "created",
+    amount: "0",
     buyer: null,
     seller: null,
     arbiter: null,
-    createdAt: null,
   });
+
   const [isLoading, setIsLoading] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
 
-  // Determine user role based on connected address
-  const getUserRole = useCallback((): 'buyer' | 'seller' | 'arbiter' | null => {
-    if (!wallet.address) return null;
-    const addr = wallet.address.toLowerCase();
-    if (escrow.buyer?.toLowerCase() === addr) return 'buyer';
-    if (escrow.seller?.toLowerCase() === addr) return 'seller';
-    if (escrow.arbiter?.toLowerCase() === addr) return 'arbiter';
-    // Default to buyer for demo purposes if no role assigned
-    if (!escrow.buyer) return 'buyer';
-    return null;
-  }, [wallet.address, escrow]);
+  const getContract = useCallback(() => {
+    if (!wallet.signer) return null;
 
-  const depositFunds = useCallback(async (amountEth: string) => {
-    if (!wallet.signer || !wallet.address) return;
-    
-    setIsLoading(true);
+    return new Contract(CONTRACT_ADDRESS, EscrowABI, wallet.signer);
+  }, [wallet.signer]);
+
+  // -------- READ ON-CHAIN STATE --------
+
+  const refreshEscrow = useCallback(async () => {
+    const contract = getContract();
+    if (!contract) return;
+
     try {
-      // Simulate transaction delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mock transaction hash
-      const mockTxHash = `0x${Array.from({ length: 64 }, () => 
-        Math.floor(Math.random() * 16).toString(16)
-      ).join('')}`;
-      
-      setTxHash(mockTxHash);
+      const statusNum = await contract.getStatus();
+      const amount = await contract.amount();
+      const buyer = await contract.buyer();
+      const seller = await contract.seller();
+      const arbiter = await contract.arbiter();
+
+      const statusMap = [
+        "created",
+        "funded",
+        "delivered",
+        "disputed",
+        "completed",
+      ] as EscrowStatus[];
+
       setEscrow({
-        status: 'funded',
-        amount: amountEth,
-        buyer: wallet.address,
-        seller: MOCK_SELLER,
-        arbiter: MOCK_ARBITER,
-        createdAt: new Date(),
+        status: statusMap[Number(statusNum)],
+        amount: formatEther(amount),
+        buyer,
+        seller,
+        arbiter,
       });
     } catch (err) {
-      console.error('Deposit failed:', err);
-    } finally {
-      setIsLoading(false);
+      console.error("Refresh escrow failed:", err);
     }
-  }, [wallet.signer, wallet.address]);
+  }, [getContract]);
+
+  useEffect(() => {
+    refreshEscrow();
+  }, [refreshEscrow]);
+
+  // -------- WRITE FUNCTIONS --------
+
+  const depositFunds = useCallback(
+    async (amountEth: string) => {
+      const contract = getContract();
+      if (!contract) return;
+
+      setIsLoading(true);
+      try {
+        const tx = await contract.deposit({
+          value: parseEther(amountEth),
+        });
+        setTxHash(tx.hash);
+        await tx.wait();
+        await refreshEscrow();
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [getContract, refreshEscrow]
+  );
 
   const confirmDelivery = useCallback(async () => {
-    if (!wallet.signer) return;
-    
+    const contract = getContract();
+    if (!contract) return;
+
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setEscrow(prev => ({ ...prev, status: 'delivered' }));
-    } catch (err) {
-      console.error('Confirm delivery failed:', err);
+      const tx = await contract.confirmDelivery();
+      setTxHash(tx.hash);
+      await tx.wait();
+      await refreshEscrow();
     } finally {
       setIsLoading(false);
     }
-  }, [wallet.signer]);
+  }, [getContract, refreshEscrow]);
 
   const releaseFunds = useCallback(async () => {
-    if (!wallet.signer) return;
-    
+    const contract = getContract();
+    if (!contract) return;
+
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setEscrow(prev => ({ ...prev, status: 'released' }));
-    } catch (err) {
-      console.error('Release funds failed:', err);
+      const tx = await contract.releaseFunds();
+      setTxHash(tx.hash);
+      await tx.wait();
+      await refreshEscrow();
     } finally {
       setIsLoading(false);
     }
-  }, [wallet.signer]);
+  }, [getContract, refreshEscrow]);
 
   const raiseDispute = useCallback(async () => {
-    if (!wallet.signer) return;
-    
+    const contract = getContract();
+    if (!contract) return;
+
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setEscrow(prev => ({ ...prev, status: 'disputed' }));
-    } catch (err) {
-      console.error('Raise dispute failed:', err);
+      const tx = await contract.raiseDispute();
+      setTxHash(tx.hash);
+      await tx.wait();
+      await refreshEscrow();
     } finally {
       setIsLoading(false);
     }
-  }, [wallet.signer]);
+  }, [getContract, refreshEscrow]);
 
-  const resolveDispute = useCallback(async (toParty: 'buyer' | 'seller') => {
-    if (!wallet.signer) return;
-    
-    setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setEscrow(prev => ({ ...prev, status: 'resolved' }));
-    } catch (err) {
-      console.error('Resolve dispute failed:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [wallet.signer]);
+  const resolveDispute = useCallback(
+    async (toSeller: boolean) => {
+      const contract = getContract();
+      if (!contract) return;
 
-  const resetEscrow = useCallback(() => {
-    setEscrow({
-      status: 'idle',
-      amount: '0',
-      buyer: null,
-      seller: null,
-      arbiter: null,
-      createdAt: null,
-    });
-    setTxHash(null);
-  }, []);
+      setIsLoading(true);
+      try {
+        const tx = await contract.resolveDispute(toSeller);
+        setTxHash(tx.hash);
+        await tx.wait();
+        await refreshEscrow();
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [getContract, refreshEscrow]
+  );
+
+  // -------- ROLE DETECTION --------
+
+  const getUserRole = useCallback(() => {
+    if (!wallet.address) return null;
+    const addr = wallet.address.toLowerCase();
+
+    if (escrow.buyer?.toLowerCase() === addr) return "buyer";
+    if (escrow.seller?.toLowerCase() === addr) return "seller";
+    if (escrow.arbiter?.toLowerCase() === addr) return "arbiter";
+
+    return null;
+  }, [wallet.address, escrow]);
 
   return {
     escrow,
     isLoading,
     txHash,
     getUserRole,
+    refreshEscrow,
     depositFunds,
     confirmDelivery,
     releaseFunds,
     raiseDispute,
     resolveDispute,
-    resetEscrow,
   };
 }

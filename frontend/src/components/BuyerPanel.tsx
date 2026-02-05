@@ -1,38 +1,31 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { EscrowCard } from './EscrowCard';
-import { EscrowState, EscrowStatus } from '@/hooks/useEscrow';
-import { ShoppingCart, Send, AlertTriangle, Loader2 } from 'lucide-react';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { EscrowCard } from "./EscrowCard";
+import { ShoppingCart, Send, AlertTriangle, Loader2 } from "lucide-react";
 
 interface BuyerPanelProps {
-  escrow: EscrowState;
-  isLoading: boolean;
-  onDeposit: (amount: string) => void;
-  onRelease: () => void;
-  onDispute: () => void;
+  escrowHook: any;
 }
 
-export function BuyerPanel({
-  escrow,
-  isLoading,
-  onDeposit,
-  onRelease,
-  onDispute,
-}: BuyerPanelProps) {
-  const [depositAmount, setDepositAmount] = useState('');
+export function BuyerPanel({ escrowHook }: BuyerPanelProps) {
+  const { escrow, isLoading, depositFunds, releaseFunds, raiseDispute } =
+    escrowHook;
+
+  const [depositAmount, setDepositAmount] = useState("");
 
   const handleDeposit = () => {
     if (depositAmount && parseFloat(depositAmount) > 0) {
-      onDeposit(depositAmount);
-      setDepositAmount('');
+      depositFunds(depositAmount);
+      setDepositAmount("");
     }
   };
 
-  const canDeposit = escrow.status === 'idle';
-  const canRelease = escrow.status === 'delivered';
-  const canDispute = escrow.status === 'funded' || escrow.status === 'delivered';
+  const canDeposit = escrow.status === "created";
+  const canRelease = escrow.status === "delivered";
+  const canDispute =
+    escrow.status === "funded" || escrow.status === "delivered";
 
   return (
     <EscrowCard
@@ -44,9 +37,13 @@ export function BuyerPanel({
       <div className="space-y-6">
         {/* Deposit Section */}
         <div className="space-y-3">
-          <Label htmlFor="deposit-amount" className="text-sm text-muted-foreground">
+          <Label
+            htmlFor="deposit-amount"
+            className="text-sm text-muted-foreground"
+          >
             Deposit Amount (ETH)
           </Label>
+
           <div className="flex gap-3">
             <Input
               id="deposit-amount"
@@ -59,6 +56,7 @@ export function BuyerPanel({
               disabled={!canDeposit || isLoading}
               className="font-mono bg-background border-border"
             />
+
             <Button
               onClick={handleDeposit}
               disabled={!canDeposit || !depositAmount || isLoading}
@@ -67,7 +65,7 @@ export function BuyerPanel({
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                'Deposit'
+                "Deposit"
               )}
             </Button>
           </div>
@@ -76,10 +74,10 @@ export function BuyerPanel({
         {/* Actions */}
         <div className="flex flex-wrap gap-3">
           <Button
-            onClick={onRelease}
+            onClick={releaseFunds}
             disabled={!canRelease || isLoading}
             variant="outline"
-            className="border-success text-success hover:bg-success hover:text-success-foreground"
+            className="border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
           >
             {isLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -90,7 +88,7 @@ export function BuyerPanel({
           </Button>
 
           <Button
-            onClick={onDispute}
+            onClick={raiseDispute}
             disabled={!canDispute || isLoading}
             variant="outline"
             className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
@@ -105,10 +103,14 @@ export function BuyerPanel({
         </div>
 
         {/* Current Deposit Info */}
-        {escrow.status !== 'idle' && (
+        {escrow.status !== "created" && (
           <div className="rounded-lg border border-border bg-background p-4">
-            <p className="text-sm text-muted-foreground">Current Escrow Amount</p>
-            <p className="font-mono text-2xl text-foreground">{escrow.amount} ETH</p>
+            <p className="text-sm text-muted-foreground">
+              Current Escrow Amount
+            </p>
+            <p className="font-mono text-2xl text-foreground">
+              {escrow.amount} ETH
+            </p>
           </div>
         )}
       </div>

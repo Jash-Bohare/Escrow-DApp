@@ -1,18 +1,18 @@
-import { EscrowState } from '@/hooks/useEscrow';
-import { StatusBadge } from './StatusBadge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Clock, User, Users, Scale } from 'lucide-react';
+import { Card, CardContent } from "@/components/ui/card";
+import { Clock, User, Users, Scale } from "lucide-react";
+import { StatusBadge } from "./StatusBadge";
 
 interface EscrowStatusProps {
-  escrow: EscrowState;
-  txHash: string | null;
+  escrowHook: any;
 }
 
 function truncateAddress(address: string): string {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
-export function EscrowStatus({ escrow, txHash }: EscrowStatusProps) {
+export function EscrowStatus({ escrowHook }: EscrowStatusProps) {
+  const { escrow, txHash } = escrowHook;
+
   return (
     <Card className="border-border bg-card">
       <CardContent className="pt-6">
@@ -31,7 +31,7 @@ export function EscrowStatus({ escrow, txHash }: EscrowStatusProps) {
             <div className="rounded-lg border border-border bg-background p-4">
               <p className="text-xs text-muted-foreground">Amount</p>
               <p className="font-mono text-lg text-foreground">
-                {escrow.status === 'idle' ? '—' : `${escrow.amount} ETH`}
+                {escrow.amount ? `${escrow.amount} ETH` : "—"}
               </p>
             </div>
 
@@ -42,7 +42,7 @@ export function EscrowStatus({ escrow, txHash }: EscrowStatusProps) {
                 Buyer
               </div>
               <p className="font-mono text-sm text-foreground">
-                {escrow.buyer ? truncateAddress(escrow.buyer) : '—'}
+                {escrow.buyer ? truncateAddress(escrow.buyer) : "—"}
               </p>
             </div>
 
@@ -53,7 +53,7 @@ export function EscrowStatus({ escrow, txHash }: EscrowStatusProps) {
                 Seller
               </div>
               <p className="font-mono text-sm text-foreground">
-                {escrow.seller ? truncateAddress(escrow.seller) : '—'}
+                {escrow.seller ? truncateAddress(escrow.seller) : "—"}
               </p>
             </div>
 
@@ -64,7 +64,7 @@ export function EscrowStatus({ escrow, txHash }: EscrowStatusProps) {
                 Arbiter
               </div>
               <p className="font-mono text-sm text-foreground">
-                {escrow.arbiter ? truncateAddress(escrow.arbiter) : '—'}
+                {escrow.arbiter ? truncateAddress(escrow.arbiter) : "—"}
               </p>
             </div>
           </div>

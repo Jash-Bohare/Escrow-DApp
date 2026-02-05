@@ -1,68 +1,64 @@
-import { cn } from '@/lib/utils';
-import { EscrowStatus } from '@/hooks/useEscrow';
-import { 
-  Clock, 
-  Coins, 
-  Package, 
-  CheckCircle, 
-  AlertTriangle, 
-  Shield 
-} from 'lucide-react';
+import { cn } from "@/lib/utils";
+import { EscrowStatus } from "@/hooks/useEscrow";
+import {
+  Clock,
+  Coins,
+  Package,
+  CheckCircle,
+  AlertTriangle,
+} from "lucide-react";
 
 interface StatusBadgeProps {
   status: EscrowStatus;
   className?: string;
 }
 
-const statusConfig: Record<EscrowStatus, {
-  label: string;
-  icon: React.ReactNode;
-  className: string;
-}> = {
-  idle: {
-    label: 'No Active Escrow',
+const statusConfig: Record<
+  EscrowStatus,
+  {
+    label: string;
+    icon: React.ReactNode;
+    className: string;
+  }
+> = {
+  created: {
+    label: "Created",
     icon: <Clock className="h-4 w-4" />,
-    className: 'bg-muted text-muted-foreground',
+    className: "bg-muted text-muted-foreground",
   },
-  awaiting_deposit: {
-    label: 'Awaiting Deposit',
-    icon: <Clock className="h-4 w-4" />,
-    className: 'bg-warning/20 text-warning',
-  },
+
   funded: {
-    label: 'Funded',
+    label: "Funded",
     icon: <Coins className="h-4 w-4" />,
-    className: 'bg-primary/20 text-primary',
+    className: "bg-blue-500/20 text-blue-500",
   },
+
   delivered: {
-    label: 'Delivery Confirmed',
+    label: "Delivered",
     icon: <Package className="h-4 w-4" />,
-    className: 'bg-success/20 text-success',
+    className: "bg-green-500/20 text-green-500",
   },
-  released: {
-    label: 'Funds Released',
-    icon: <CheckCircle className="h-4 w-4" />,
-    className: 'bg-success/20 text-success',
-  },
+
   disputed: {
-    label: 'Disputed',
+    label: "Disputed",
     icon: <AlertTriangle className="h-4 w-4" />,
-    className: 'bg-destructive/20 text-destructive',
+    className: "bg-red-500/20 text-red-500",
   },
-  resolved: {
-    label: 'Resolved',
-    icon: <Shield className="h-4 w-4" />,
-    className: 'bg-success/20 text-success',
+
+  completed: {
+    label: "Completed",
+    icon: <CheckCircle className="h-4 w-4" />,
+    className: "bg-green-500/20 text-green-500",
   },
 };
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
   const config = statusConfig[status];
-  
+
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium',
+        "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium",
         config.className,
         className
       )}
