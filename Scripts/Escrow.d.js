@@ -1,18 +1,21 @@
 async function main() {
-    const [buyer, seller, arbiter] = await ethers.getSigners();
+  const [deployer] = await ethers.getSigners();
 
-    console.log("Buyer address: ", buyer.address);
-    console.log("Seller address: ", seller.address);
-    console.log("Arbiter address: ", arbiter.address);
+  const SELLER_ADDRESS = "0x6437df87F8b6f313e12e45FC88b69C8247224908";
+  const ARBITER_ADDRESS = "0xb78407D102b2C36623307CAa9A2C7A7118330d37";
 
-    const Escrow = await ethers.getContractFactory("Escrow");
+  console.log("Deployer (Buyer): ", deployer.address);
+  console.log("Seller: ", SELLER_ADDRESS);
+  console.log("Arbiter: ", ARBITER_ADDRESS);
 
-    const escrow = await Escrow.deploy(seller.address, arbiter.address);
+  const Escrow = await ethers.getContractFactory("Escrow");
 
-    console.log("Escrow deployed to: ", escrow.address);
+  const escrow = await Escrow.deploy(SELLER_ADDRESS, ARBITER_ADDRESS);
+
+  console.log("Escrow deployed to: ", escrow.address);
 }
 
 main().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
+  console.error(error);
+  process.exitCode = 1;
 });
